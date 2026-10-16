@@ -157,6 +157,9 @@ def main(seq):
         - ValueError: when sequence is RNA instead of DNA
     """
 
+    # Account for lowercase nucleotides if any
+    seq = seq.upper()
+
     # Check whether sequence is actually DNA
     if "U" in seq:
         raise ValueError("Expected DNA sequence, got RNA.")
@@ -174,7 +177,7 @@ def main(seq):
 
 
 if __name__ == "__main__":
-    seq = "ATAGTCGTGATGTA"
+    seq = "ATAGTCGTGaTGTA"
     false_seq = "ATAGTCGTAaNnAT"
     rna_seq = "AUAGUCGUGAUGUA"
 
