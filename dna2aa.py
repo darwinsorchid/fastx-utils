@@ -16,7 +16,7 @@ Procedure:
 Input 1: FASTA file with DNA sequences
 Output: FASTA file format headers + translated sequences
 
-Usage: python dna2aa.py DNA.fna [output_file.txt]
+Usage: python dna2aa.py DNA.fna output_file.txt [optional]
 
 Version: 1.00
 Date: 2026-10-19
@@ -39,11 +39,31 @@ continues after them.
 """
 
 # Imports
-from helpers import _all_possible_codons, _get_code
+import argparse
+
+from file_io import read_file, write_file
+from helpers import *
+
+
+def get_args(argv=None):
+
+    parser = argparse.ArgumentParser(
+        prog="dna2aa.py",
+        description="Translates DNA sequences from FASTA file to amino acid sequences.",
+    )
+    parser.add_argument("input_file", help="FASTA file containing DNA sequences.")
+    parser.add_argument(
+        "-o",
+        "--output_file",
+        default="output_file.txt",
+        help="[optional] Name for output file.",
+    )
+
+    return parser.parse_args(argv)
 
 
 def dna_to_rna(seq: str) -> str:
-    """Takes in a DNA sequence and replaces T with U.
+    """Take in a DNA sequence and replace T with U.
 
     Args:
         - seq: DNA sequence
@@ -55,7 +75,7 @@ def dna_to_rna(seq: str) -> str:
 
 
 def check_dna(seq: str) -> bool:
-    """Checks if a given sequence contains non-DNA letters.
+    """Check if a given sequence contains non-DNA letters.
 
     Args:
         -seq: DNA sequence in string format
@@ -71,7 +91,6 @@ def check_dna(seq: str) -> bool:
         # Break loop if a non-valid letter is found
         if n not in nucleotides:
             include_seq = False
-            print("SequenceExcluded: contains non-DNA letters.")
             break
         else:
             include_seq = True
@@ -80,8 +99,8 @@ def check_dna(seq: str) -> bool:
 
 
 def seq_to_codons(seq: str) -> list[str]:
-    """Splits sequence to codons (3-base strings) and returns a list of the codons.
-    Disregards 1-2 leftover bases at the end if number of bases is not divisible by 3.
+    """Split sequence to codons (3-base strings) and return a list of the codons.
+    Disregard 1-2 leftover bases at the end if number of bases is not divisible by 3.
 
     Args:
         -seq: Nucleotide sequence in string format
@@ -104,7 +123,7 @@ def seq_to_codons(seq: str) -> list[str]:
 
 def translate_codon(codon: str, translation_table: str = "standard") -> str:
     """
-    Translates a single codon to the corresponding amino acid using the specified genetic code.
+    Translate a single codon to the corresponding amino acid using the specified genetic code.
 
     Args:
         - codon: 3-base string
@@ -114,19 +133,20 @@ def translate_codon(codon: str, translation_table: str = "standard") -> str:
         - translated amino acid in single-letter format
     """
 
-    if codon not in _all_possible_codons():
-        print("Invalid codon found.")
-
     if translation_table == "standard":
-        code = _get_code()
+        code = get_code()
 
-    amino_acid = code["codons"][codon]
+    if codon not in all_possible_codons():
+        raise ValueError("Invalid codon found.")
+
+    else:
+        amino_acid = code["codons"][codon]
 
     return amino_acid
 
 
 def codons_to_polypeptide(codons_list: list[str]) -> str:
-    """Translates a list of codons to a list of amino acids and converts that to a string.
+    """Translate a list of codons to a list of amino acids and convert that to a string.
 
     Args:
         - codons_list: List of codons
@@ -144,8 +164,8 @@ def codons_to_polypeptide(codons_list: list[str]) -> str:
     return "".join(aa_list)
 
 
-def main(seq):
-    """Executes the basic logic of the program.
+def translate_seq(seq: str) -> str:
+    """Translate one DNA sequence.
 
     Args:
         -seq: DNA sequence in string format
@@ -160,10 +180,6 @@ def main(seq):
     # Account for lowercase nucleotides if any
     seq = seq.upper()
 
-    # Check whether sequence is actually DNA
-    if "U" in seq:
-        raise ValueError("Expected DNA sequence, got RNA.")
-
     # DNA -> RNA
     rna_seq = dna_to_rna(seq)
 
@@ -176,34 +192,52 @@ def main(seq):
     return polypeptide
 
 
+def translate_fasta(fasta_dict: dict[str, str]) -> dict[str, str]:
+    """Translate a full FASTA file of DNA sequences and
+    save output to file with FASTA headers + polypeptides.
+
+    Args:
+        - fasta_dict: FASTA records dictionary with header: DNA sequence
+
+    Returns:
+        - FASTA records dictionary with header: amino acid sequence
+    """
+
+    protein_dict = {}
+
+    for head, seq in fasta_dict.items():
+        # Check validity of DNA sequence
+        report_seq = check_dna(seq)
+
+        # Check whether sequence is actually DNA
+        if "U" in seq:
+            raise ValueError("Expected DNA sequence, got RNA.")
+
+        elif not report_seq:
+            print(f"Sequence {head} excluded: contains non-DNA letters.")
+            continue
+
+        else:
+            polypeptide = translate_seq(seq)
+            protein_dict[f"{head}\n"] = f"{polypeptide}\n"
+
+    return protein_dict
+
+
+def main(argv=None):
+
+    # Get arguments
+    args = get_args(argv)
+
+    # Read and store FASTA records
+    fasta_dict = read_file(args.input_file)
+
+    # Translate DNA sequences and store as FASTA records
+    protein_dict = translate_fasta(fasta_dict)
+
+    # Write to output file with FASTA format (header - translated sequence)
+    write_file(args.output_file, protein_dict)
+
+
 if __name__ == "__main__":
-    seq = "ATAGTCGTGaTGTA"
-    false_seq = "ATAGTCGTAaNnAT"
-    rna_seq = "AUAGUCGUGAUGUA"
-
-    # rna_seq = dna_to_rna(seq)
-    # print(rna_seq)
-
-    # codon = "UGA"
-    # amino_acid = translate_codon(codon)
-    # print(amino_acid)
-
-    # codons = seq_to_codons(seq)
-    # print(codons)
-
-    # polypeptide = codons_to_polypeptide(codons)
-    # print(polypeptide)
-
-    polypeptide = main(seq)
-    print(polypeptide)
-
-    rna_polypeptide = main(rna_seq)
-
-    report_seq_true = check_dna(seq)
-    print(report_seq_true)
-    report_seq_false = check_dna(false_seq)
-    print(report_seq_false)
-
-
-# Check that it's DNA --> Function #1
-# Check if it's RNA or non-DNA letters --> Report sequence
+    main()

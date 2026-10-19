@@ -17,7 +17,7 @@ Input 1:
 Input 2:
 Output:
 
-Usage:
+Usage: python amino_count.py amino.faa output_file.txt [optional]
 
 Version: 1.00
 Date:
@@ -30,7 +30,28 @@ Limitations:
 ┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
 """
 
+import argparse
+
 from file_io import read_file, write_file
+
+
+def get_args(argv=None):
+
+    parser = argparse.ArgumentParser(
+        prog="amino_count.py",
+        description="Count absolute amino acid abundances in a FASTA file with translated sequences.",
+    )
+    parser.add_argument(
+        "input_file", help="FASTA file containing translated polypeptides."
+    )
+    parser.add_argument(
+        "-o",
+        "--output_file",
+        default="output_file.txt",
+        help="[optional] Name for output file.",
+    )
+
+    return parser.parse_args(argv)
 
 
 def count_aa(sequences: list[str]) -> dict[str, int]:
@@ -77,14 +98,20 @@ def format_counts(counts: dict[str, int]) -> list[str]:
     return [f"{a}\t{count}\n" for a, count in counts.items()]
 
 
-def main(in_file: str, out_file: str = "output.txt") -> None:
+def main(argv=None) -> None:
 
-    fasta_dict = read_file(in_file)
+    # Get arguments
+    args = get_args(argv)
+
+    fasta_dict = read_file(args.input_file)
 
     seq_list = []
 
     for seq in fasta_dict.values():
         seq_list.append(seq)
+
+    if not seq_list:
+        raise ValueError("Empty sequence list.")
 
     # Count absolute abundances for all sequences in the file
     aa_dict = count_aa(seq_list)
@@ -93,14 +120,8 @@ def main(in_file: str, out_file: str = "output.txt") -> None:
     aa_list = format_counts(aa_dict)
 
     # Write to output file
-    write_file(out_file, aa_list)
+    write_file(args.output_file, aa_list)
 
 
 if __name__ == "__main__":
-    seqs = ["EHCFYPGGVWLLLLVVVPHENQVSPT", "ARVPKATRWPFRCSPPICIT*FDPVL"]
-    in_file = "out_test.fna"
-    main(in_file)
-
-    aa_count = count_aa(seqs)
-
-    print(aa_count)
+    main()
