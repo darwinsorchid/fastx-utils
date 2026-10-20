@@ -41,15 +41,16 @@ def read_file(file_name: str) -> dict[str, str]:
     Accounts for sequences wrapping over more than one lines.
 
     Args:
-        - file_name: String containing name of the file to be read
+        - file_name: String containing name of the file to be read.
 
     Returns:
-        - Dictionary populated by header: sequence from parsed FASTA file
+        - Dictionary populated by header: sequence from parsed FASTA file.
 
     Raises:
-        - ValueError: if header corresponds to empty sequence
-        - ValueError: if file does not contain FASTA headers (content compatibility check)
-        - ValueError: if duplicate header is found in file
+        - ValueError: if header corresponds to empty sequence.
+        - ValueError: if file does not contain FASTA headers (content compatibility check).
+        - ValueError: if duplicate header is found in file.
+        - ValueError: if empty file (no records found).
     """
 
     with open(file_name, "r") as f:
@@ -103,6 +104,10 @@ def read_file(file_name: str) -> dict[str, str]:
         # Add last header record
         fasta_dict[open_header] = "".join(seqs) if open_header != "" else None
 
+    # Check for empty file
+    if not fasta_dict:
+        raise ValueError(f"{file_name}: no FASTA records found.")
+
     return fasta_dict
 
 
@@ -111,13 +116,13 @@ def write_file(file_name: str, lines) -> None:
 
     Args:
         - file_name: String containing name of file to be used for writing and saving output
-        - lines: Iterable string object containing already formatted content
+        - lines: Iterable string object containing already formatted content.
 
     Returns:
         - None
 
     Raises:
-        - TypeError: if lines does not correspond to a supported type (list, str, dict)
+        - TypeError: if lines does not correspond to a supported type (list, str, dict).
     """
 
     # Check that content is stored in a supported data type
@@ -143,7 +148,8 @@ def read_fastq(file_name: str) -> dict[str, tuple[str, str]]:
         - Dictionary of FASTQ records as: {header: (sequence, quality)}.
 
     Raises:
-        - FileNotFoundError: if input file does not exist
+        - FileNotFoundError: if input file does not exist.
+        - ValueError: if empty file (no records found).
     """
 
     fastq_dict = {}
@@ -165,7 +171,9 @@ def read_fastq(file_name: str) -> dict[str, tuple[str, str]]:
                 if pos == 0:
                     if not line.startswith("@"):
                         # FASTQ format check
-                        raise ValueError(f"Line {n + 1}: header must start with @")
+                        raise ValueError(
+                            f"Invalid FASTA format: Line {n + 1}: header must start with @"
+                        )
                     else:
                         header = line
 
@@ -199,5 +207,9 @@ def read_fastq(file_name: str) -> dict[str, tuple[str, str]]:
                     else:
                         # Save full 4-line record
                         fastq_dict[header] = (seq, quality)
+
+    # Check for empty file
+    if not fastq_dict:
+        raise ValueError(f"{file_name}: no FASTQ records found.")
 
     return fastq_dict
