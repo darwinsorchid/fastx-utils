@@ -69,8 +69,11 @@ def read_file(file_name: str) -> dict[str, str]:
                 continue
             # Manage header lines
             if line.startswith(">"):
+                # Check for duplicate header entries
+                if line in fasta_dict:
+                    raise ValueError("Duplicate header found.")
                 # I. Already existing open_header (not empty string)
-                if line != open_header and open_header:
+                elif line != open_header and open_header:
                     # Check is sequence for header exists
                     if not seqs:
                         raise ValueError(f"Header {open_header} has no sequence.")
@@ -97,12 +100,8 @@ def read_file(file_name: str) -> dict[str, str]:
         if not open_header:
             raise ValueError(f"{file_name}: No FASTA header found.")
 
-        # Check for duplicate header entries
-        if open_header in fasta_dict:
-            raise ValueError("Duplicate header found.")
-        else:
-            # Add last header record
-            fasta_dict[open_header] = "".join(seqs) if open_header != "" else None
+        # Add last header record
+        fasta_dict[open_header] = "".join(seqs) if open_header != "" else None
 
     return fasta_dict
 
