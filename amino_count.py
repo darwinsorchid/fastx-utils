@@ -64,8 +64,8 @@ def get_args(argv=None) -> argparse.Namespace:
     )
     # Optional output file name
     parser.add_argument(
-        "-o",
-        "--output_file",
+        "output_file",
+        nargs="?",
         default="output_file.txt",
         help="[optional] Name for output file.",
     )

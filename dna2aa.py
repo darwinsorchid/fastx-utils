@@ -79,8 +79,8 @@ def get_args(argv=None) -> argparse.Namespace:
 
     # Optional output file name
     parser.add_argument(
-        "-o",
-        "--output_file",
+        "output_file",
+        nargs="?",
         default="output_file.txt",
         help="[optional] Name for output file.",
     )
@@ -221,9 +221,6 @@ def translate_seq(seq: str) -> str:
         - polypeptide sequence in string format.
     """
 
-    # Account for lowercase nucleotides if any
-    seq = seq.upper()
-
     # DNA -> RNA
     rna_seq = dna_to_rna(seq)
 
@@ -250,6 +247,9 @@ def translate_fasta(fasta_dict: dict[str, str]) -> dict[str, str]:
     protein_dict = {}
 
     for head, seq in fasta_dict.items():
+        # Account for lowercase nucleotides if any
+        seq = seq.upper()
+
         # Check validity of DNA sequence
         report_seq = check_dna(seq)
 
