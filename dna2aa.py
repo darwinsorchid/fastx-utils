@@ -3,55 +3,81 @@
 
 dna2aa.py
 
-Description:
+Description: This script translates multiple DNA sequences extracted from a FASTA file to amino acid
+            sequences using the standard genetic code. Translation is performed starting from the
+            first base of the sequence (without searching for a start codon). Since sequences are
+            split into codons (3-base strings), entries of length that is not a multiple of three
+            leave trailing bases at the end. This program ignores 1-2 trailing bases in such cases
+            during translation.Stop codons are denoted by "*" and translation continues after a
+            stop codon is found. Sequences that contain any non-DNA letters are reported as invalid
+            and excluded from the translation workflow.
 
 
 User-defined functions: None
-Non-standard functions: None
+Non-standard modules: None
+Internal modules consumed: file_io.py
 
 
 Procedure:
+    1. Parse command-line arguments
+    2. Read FASTA file and store records as dictionary: {header: sequence}
+    3. Iterate over sequences
+    4. Check if sequence contains only valid DNA nucleotides
+    5. Convert T -> U (DNA -> RNA)
+    6. Split sequence into codons
+    7. Translate each codon to the corresponding amino acid using the standard
+      genetic code and store as list
+    8. Join amino acids list to polypeptide string
+    9. Write {header: AA sequence} to output file in FASTA format
 
+Input: FASTA file with DNA sequences
+Output: FASTA file containing
 
-Input 1: FASTA file with DNA sequences
-Output: FASTA file format headers + translated sequences
-
-Usage: python dna2aa.py DNA.fna output_file.txt [optional]
+Usage: python dna2aa.py DNA.fna [-o output_file.txt]
 
 Version: 1.00
 Date: 2026-10-19
 Name: Alexandra Bekou
 ------------------------------
 
-
 Limitations:
+    - Only standard genetic code implemented (other tables can be supported if added to helpers module)
+    - Translation does not search for a start codon
+    - Translation is performed using only 1 reading frame (instead of 6)
 
-
-Convert T→U and translate from the first
-base (no start codon search).
-
-Stop codons appear as *, and translation
-continues after them.
-•Ignore 1-2 leftover bases at the end.
-•Report any sequence with non-DNA letters.
-•Create your own DNA.fna to test with.
 ┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
 """
 
 # Imports
 import argparse
+import os
 
 from file_io import read_file, write_file
 from helpers import *
 
 
-def get_args(argv=None):
+def get_args(argv=None) -> argparse.Namespace:
+    """Parse command-line arguments:
+        • input_file: Path to input FASTA file
+        • -o: (optional) Output file name
+    Args:
+        - argv: (optional) If not None, the passed-in list of arguments is used
+                instead of command-line args - used for testing.
 
+    Returns:
+        - List of arguments passed in as command-line args or directly passed in
+          the function during testing.
+    """
+
+    # Create parser instance for script
     parser = argparse.ArgumentParser(
         prog="dna2aa.py",
         description="Translates DNA sequences from FASTA file to amino acid sequences.",
     )
+    # Required input FASTA file
     parser.add_argument("input_file", help="FASTA file containing DNA sequences.")
+
+    # Optional output file name
     parser.add_argument(
         "-o",
         "--output_file",
@@ -66,30 +92,36 @@ def dna_to_rna(seq: str) -> str:
     """Take in a DNA sequence and replace T with U.
 
     Args:
-        - seq: DNA sequence
+        - seq: DNA sequence.
 
     Returns:
-        - DNA sequence with U instead of T
+        - DNA sequence with U instead of T.
     """
     return seq.replace("T", "U")
 
 
 def check_dna(seq: str) -> bool:
-    """Check if a given sequence contains non-DNA letters.
+    """Check if a given sequence contains any non-DNA letters.
+
+    A boolean variable is used to control if a sequence will be included for
+    translation and written to the output file or if it will be reported as
+    invalid (containing non-DNA letters) and excluded from the remaining steps
+    of the translation workflow.
 
     Args:
-        -seq: DNA sequence in string format
+        -seq: DNA sequence in string format.
 
     Returns:
-        - boolean variable for reporting sequence as invalid or including it for translation.
+        - Boolean variable for reporting sequence as invalid or
+        including it for translation.
     """
 
     # Valid nucleotide letters
     nucleotides = "ATGC"
 
     for n in seq:
-        # Break loop if a non-valid letter is found
         if n not in nucleotides:
+            # Break loop if a non-valid letter is found
             include_seq = False
             break
         else:
@@ -99,22 +131,24 @@ def check_dna(seq: str) -> bool:
 
 
 def seq_to_codons(seq: str) -> list[str]:
-    """Split sequence to codons (3-base strings) and return a list of the codons.
-    Disregard 1-2 leftover bases at the end if number of bases is not divisible by 3.
+    """Split sequence in codons (3-base strings) and return a list of the codons.
+    Disregard 1-2 leftover bases at the end if sequence length is not multiple of 3.
 
     Args:
-        -seq: Nucleotide sequence in string format
+        -seq: Nucleotide sequence in string format.
     Returns:
-        - List of 3-base codons
+        - List of 3-base codons.
     """
 
     # Initialize empty list to store codons
     codons = []
 
-    # Split sequence in 3-base strings
+    # Split sequence in 3-base codon strings
     for i in range(0, len(seq), 3):
+        # Skip last 1-2 nucleotides if sequence is not a multiple of 3
         if len(seq[i : i + 3]) < 3:
             continue
+        # Store codons
         else:
             codons.append(seq[i : i + 3])
 
@@ -122,23 +156,32 @@ def seq_to_codons(seq: str) -> list[str]:
 
 
 def translate_codon(codon: str, translation_table: str = "standard") -> str:
-    """
-    Translate a single codon to the corresponding amino acid using the specified genetic code.
+    """Single codon translation.
+
+    Translate a single codon to the corresponding amino acid using the
+    specified genetic code, using the standard genetic code as default.
 
     Args:
-        - codon: 3-base string
-        - translation_table: the genetic code selected for performing codon to amino acid translation
+        - codon: 3-base string.
+        - translation_table: the genetic code selected for performing codon
+          to amino acid translation.
 
     Returns:
-        - translated amino acid in single-letter format
+        - Translated amino acid in single-letter format.
+
+    Raises:
+        - ValueError: if a 3-base string is not a valid codon.
     """
 
+    # Retrieve appropriate genetic code table using helper function
     if translation_table == "standard":
         code = get_code()
 
+    # Check if 3-base string is a valid codon
     if codon not in all_possible_codons():
         raise ValueError("Invalid codon found.")
 
+    # Get amino acid from table for the given codon
     else:
         amino_acid = code["codons"][codon]
 
@@ -146,18 +189,19 @@ def translate_codon(codon: str, translation_table: str = "standard") -> str:
 
 
 def codons_to_polypeptide(codons_list: list[str]) -> str:
-    """Translate a list of codons to a list of amino acids and convert that to a string.
+    """Translate a list of codons to a list of amino acids and convert into string.
 
     Args:
-        - codons_list: List of codons
+        - codons_list: list of codons.
 
     Returns:
-        - string of amino acids (polypeptide)
+        - String of amino acids (polypeptide).
     """
 
     # Initialize empty list for storing amino acids
     aa_list = []
 
+    # Translate codons one by one and add to list
     for codon in codons_list:
         aa_list.append(translate_codon(codon))
 
@@ -165,16 +209,16 @@ def codons_to_polypeptide(codons_list: list[str]) -> str:
 
 
 def translate_seq(seq: str) -> str:
-    """Translate one DNA sequence.
+    """Translate a single DNA sequence.
+
+    Translation begins from the first codon (no looking for start codons)
+    and continues after a stop codon.
 
     Args:
-        -seq: DNA sequence in string format
+        -seq: DNA sequence in string format.
 
     Returns:
-        - polypeptide sequence in string format
-
-    Raises:
-        - ValueError: when sequence is RNA instead of DNA
+        - polypeptide sequence in string format.
     """
 
     # Account for lowercase nucleotides if any
@@ -197,10 +241,10 @@ def translate_fasta(fasta_dict: dict[str, str]) -> dict[str, str]:
     save output to file with FASTA headers + polypeptides.
 
     Args:
-        - fasta_dict: FASTA records dictionary with header: DNA sequence
+        - fasta_dict: FASTA records dictionary with header: DNA sequence.
 
     Returns:
-        - FASTA records dictionary with header: amino acid sequence
+        - FASTA records dictionary as {header: amino acid sequence}.
     """
 
     protein_dict = {}
@@ -209,25 +253,42 @@ def translate_fasta(fasta_dict: dict[str, str]) -> dict[str, str]:
         # Check validity of DNA sequence
         report_seq = check_dna(seq)
 
-        # Check whether sequence is actually DNA
-        if "U" in seq:
-            raise ValueError("Expected DNA sequence, got RNA.")
-
-        elif not report_seq:
+        # Report any sequences that have ANY non-DNA letter
+        if not report_seq:
             print(f"Sequence {head} excluded: contains non-DNA letters.")
             continue
 
         else:
+            # Convert a full sequence into a polypeptide and store as {FASTA header: AA sequence}
             polypeptide = translate_seq(seq)
             protein_dict[f"{head}\n"] = f"{polypeptide}\n"
 
     return protein_dict
 
 
-def main(argv=None):
+def main(argv=None) -> None:
+    """Execute main logic.
 
+    Parse arguments, read file with FASTA records of DNA sequences and translate sequences
+    containing only DNA letters. Sequences with any non-DNA letters are reported as invalid
+    and are not translated. Translated sequences are written to an output file in FASTA format
+    (no multi-line wrapping).
+
+    Args:
+        - argv: (optional) List of arguments for input and output file names.
+
+    Returns:
+        - None
+
+    Raises:
+        - FileNonFoundError: if FASTA input file path does not exist.
+    """
     # Get arguments
     args = get_args(argv)
+
+    # Check that input file exists
+    if not os.path.isfile(args.input_file):
+        raise FileNotFoundError(f"File {args.input_file} does not exist.")
 
     # Read and store FASTA records
     fasta_dict = read_file(args.input_file)

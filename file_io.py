@@ -4,24 +4,29 @@
 file_io.py
 
 Description: This script is designed to work as a file-reading module consumed by all other scripts that
-            perform analyses on DNA sequences. It parses through a FASTA file and outputs a dictionary of
-            header: sequence key-value pairs. It accounts for sequences wrapping over one or multiple lines.
-            Since this is developed to be used as a module, all error handling and input QC are to be handled
-            in the main script.
+            perform analyses on DNA sequences. It contains the following functions:
+
+                • read_file: Parse through a FASTA file and output a dictionary of
+                            {header: sequence} key-value pairs. It supports sequences
+                            wrapping over one or multiple lines.
+
+                • write_file: Iterate over str, list or dict object values and write them
+                            to an output file. Content is expected to be formatted before-hand.
+                            Supports FASTA and FASTQ file formats.
+
+                • read_fastq: Parse through a FASTQ file and output a dictionary of
+                            {header: (sequence, quality)}.
+
+            Since this is developed to be used as a module, all error handling regarding input QC are to
+            be handled in the main script and inputs / outputs are separately defined for each function.
+
 
 User-defined functions: None
 Non-standard modules:   None
 
 
-Procedure:
-    1. Parse FASTA file (manages interleaved sequences)
-    2. Store header: sequence pairs in dictionary
+Usage: (internal) from file_io import *
 
-
-Input:  File name (str)
-Output: Dictionary of header: sequence pairs
-
-Usage: (internal) from file_reader import *
 
 Version: 1.00
 Date: 2026-10-17
@@ -30,11 +35,9 @@ Name: Alexandra Bekou
 ┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
 """
 
-import os
-
 
 def read_file(file_name: str) -> dict[str, str]:
-    """Read a FASTA file and return dictionary with headers:sequences.
+    """Iterate over FASTA file and return dictionary with headers:sequences.
     Accounts for sequences wrapping over more than one lines.
 
     Args:
@@ -42,10 +45,12 @@ def read_file(file_name: str) -> dict[str, str]:
 
     Returns:
         - Dictionary populated by header: sequence from parsed FASTA file
-    """
 
-    if not os.path.isfile(file_name):
-        raise FileNotFoundError(f"File {file_name} does not exist.")
+    Raises:
+        - ValueError: if header corresponds to empty sequence
+        - ValueError: if file does not contain FASTA headers (content compatibility check)
+        - ValueError: if duplicate header is found in file
+    """
 
     with open(file_name, "r") as f:
         # Initialize objects for storing values when parsing FASTA lines
@@ -88,13 +93,15 @@ def read_file(file_name: str) -> dict[str, str]:
                 if open_header:
                     seqs.append(line)
 
+        # Check format - raise if no compatible FASTA header found
         if not open_header:
             raise ValueError(f"{file_name}: No FASTA header found.")
 
-        # Add last header record
+        # Check for duplicate header entries
         if open_header in fasta_dict:
             raise ValueError("Duplicate header found.")
         else:
+            # Add last header record
             fasta_dict[open_header] = "".join(seqs) if open_header != "" else None
 
     return fasta_dict
@@ -104,33 +111,49 @@ def write_file(file_name: str, lines) -> None:
     """Iterate over provided lines and write them to specified output file.
 
     Args:
-        - file_name: Name of file to be used for writing and saving output
-        - lines: Iterable string object containing generated data
+        - file_name: String containing name of file to be used for writing and saving output
+        - lines: Iterable string object containing already formatted content
 
     Returns:
         - None
+
+    Raises:
+        - TypeError: if lines does not correspond to a supported type (list, str, dict)
     """
 
+    # Check that content is stored in a supported data type
     if type(lines) not in [list, str, dict]:
         raise TypeError("Unsupported data type.")
 
     with open(file_name, "w") as f:
+        # Write string / list content
         if type(lines) in [list, str]:
             f.writelines(lines)
+        # Write dict content
         elif type(lines) == dict:
             f.writelines(f"{key}{value}" for key, value in lines.items())
 
 
 def read_fastq(file_name: str) -> dict[str, tuple[str, str]]:
+    """Iterate over FASTQ file and store 4-line records as a dictionary.
 
-    if not os.path.isfile(file_name):
-        raise FileNotFoundError(f"File {file_name} does not exist.")
+    Args:
+        - file_name: String containing name of file to be read.
+
+    Returns:
+        - Dictionary of FASTQ records as: {header: (sequence, quality)}.
+
+    Raises:
+        - FileNotFoundError: if input file does not exist
+    """
 
     fastq_dict = {}
 
     with open(file_name, "r") as f:
         for n, line in enumerate(f):
+            # Keep clean info (no newline characters)
             line = line.rstrip("\n")
+
             # Check iteration position based on the FASTQ 4-line record format
             pos = n % 4
 
@@ -142,6 +165,7 @@ def read_fastq(file_name: str) -> dict[str, tuple[str, str]]:
                 # Store record's header line
                 if pos == 0:
                     if not line.startswith("@"):
+                        # FASTQ format check
                         raise ValueError(f"Line {n + 1}: header must start with @")
                     else:
                         header = line
@@ -153,6 +177,7 @@ def read_fastq(file_name: str) -> dict[str, tuple[str, str]]:
                     else:
                         seq = line
 
+                # FASTQ format check
                 elif pos == 2:
                     if not line.startswith("+"):
                         raise ValueError(
@@ -169,17 +194,11 @@ def read_fastq(file_name: str) -> dict[str, tuple[str, str]]:
                             f"Sequence length does not match quality characters: \n{seq}\n{quality}"
                         )
 
-                    # Save full 4-line record
+                    # Check for duplicate headers
                     if header in fastq_dict:
                         raise ValueError("Duplicate header found.")
                     else:
+                        # Save full 4-line record
                         fastq_dict[header] = (seq, quality)
 
     return fastq_dict
-
-
-if __name__ == "__main__":
-    file_name = "DNA.fna"
-
-    fasta_dict = read_file(file_name)
-    print(fasta_dict)

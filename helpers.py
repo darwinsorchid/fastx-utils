@@ -1,9 +1,40 @@
 """
-This script is made for defining helper functions and keeping code modular.
+┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
+
+helpers.py
+
+Description: This script is made for defining helper functions and keeping code modular. It contains the
+            following functions:
+
+                • get_code: Returns the standard genetic code (NCBI Table 1) as a dictionary with start
+                codons, stop codons and a codon → amino acid look-up table.
+
+
+                • all_possible_codons: Returns a set of all 64 possible RNA codons, used to validate
+                codons before translation.
+
+
+User-defined functions: None
+Non-standard modules: None
+
+
+Usage: (internal) from helpers import *
+
+
+Version: 1.00
+Date:
+Name: Alexandra Bekou
+--------------------------------
+
+Limitations:
+    • Only standard genetic code is supported
+    • Codons must be uppercase RNA
+
+┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
 """
 
 
-def _get_code():
+def get_code():
     """Helper function to get the genetic code as a dictionary"""
 
     # NCBI Table 1
@@ -81,7 +112,7 @@ def _get_code():
     return standard_gen_code
 
 
-def _all_possible_codons():
+def all_possible_codons():
     """Helper function that returns a set of all possible codons
     Args:
         - None

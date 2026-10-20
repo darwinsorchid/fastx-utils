@@ -3,9 +3,9 @@
 
 generate_data.py
 
-Description: This script generates a test .fna file, which contains DNA sequences of various lengths in
-             FASTA format. It also gives the option of creating sequences with false DNA letters or RNA
-             nucleotides to some of the sequences to test the robustness of a program's QC.
+Description: This script generates a single file containing DNA sequences of various lengths in
+             FASTA format. It also gives the option of creating sequences with false DNA letters
+             or RNA nucleotides to some of the sequences to test the robustness of a program's QC.
 
 User-defined functions: None
 Non-standard modules: None
@@ -23,7 +23,7 @@ Input 1: Output file name (e.g. DNA.fna)
 Input 2: (optional) Number of sequences to be generated
 Input 3: (optional) Perturb / Non-perturb mode
 
-Output: [file-name].fna file in FASTA format with generated headers + sequences
+Output: File in FASTA format with generated headers and corresponding sequences
 
 Usage:
     - MODE I. Generate valid DNA sequences:
@@ -36,6 +36,12 @@ Usage:
 Version: 1.00
 Date: 2026-10-16
 Name: Alexandra Bekou
+------------------------
+
+Limitations:
+    • Currently perturbation works on all generated sequences with a uniform probability; Perturbing
+    a portion of the file's sequences would be more realistic.
+
 ┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
 """
 
@@ -45,18 +51,19 @@ import random
 from collections.abc import Generator
 
 
-def parse_args() -> argparse.Namespace:
-    """Parses command-line arguments:
+def parse_args(argv=None) -> argparse.Namespace:
+    """Parse command-line arguments:
         • file_name: Output file name that will be used to write content.
         • num_seq: Number of sequences to be generated.
-        • -p: (optional) If used it stores True as a boolean value and the script produces invalid sequences,
-                         otherwise it stores False.
-
+        • -p: (optional) If used it stores True as a boolean value and the script produces
+            invalid sequences, otherwise it stores False.
     Args:
-        -None
+        - argv: (optional) If not None, the passed-in list of arguments is used
+                instead of command-line args - used for testing.
 
     Returns:
-        -Arguments list
+        - List of arguments passed in as command-line args or directly passed in
+          the function during testing.
     """
     parser = argparse.ArgumentParser(
         description="Generate FASTA file containing (valid/invalid) DNA sequences for testing.\n"
@@ -77,7 +84,7 @@ def parse_args() -> argparse.Namespace:
         help="Choose whether to produce valid or invalid DNA sequences for testing.",
     )
 
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def header_generator(num_seq: int) -> Generator[str]:
@@ -121,9 +128,9 @@ def seq_generator(num_seq: int, perturb: bool) -> Generator[str]:
 
 
 def make_content(num_seq: int, perturb: bool) -> str:
-    """Uses header and sequence generators to create header + sequence pairs and
-    and converts the generated strings to FASTA format taking into account interleaved
-    sequences.
+    """Use header and sequence generators to create header + sequence pairs and
+    and convert the generated strings to FASTA format taking into account sequences
+    wrapping over more than one lines.
 
     Args:
         - num_seq: Number of sequences to be generated
@@ -168,8 +175,8 @@ def make_content(num_seq: int, perturb: bool) -> str:
 
 
 def make_file(file_name: str, fasta_content: str) -> None:
-    """Uses formatted FASTA content (headers+ sequences) dictionary
-    and writes it to user-specified output file name.
+    """Use formatted FASTA content (headers+ sequences) dictionary
+    and write it to user-specified output file name.
 
     Args:
         - file_name: Output file name (e.g. DNA.fna)
