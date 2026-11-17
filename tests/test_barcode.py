@@ -8,7 +8,7 @@ Description: Driver script for testing barcode.py. Tests the accuracy and robust
             - main
 
 
-Usage: python -m tests.test_barcode.py
+Usage: python -m tests.test_barcode
 
 Version: 1.00
 Date: 2026-10-20
